@@ -1,7 +1,7 @@
 export type User = {
   id: string;
   email: string;
-  password: string; // demo-only, not production-safe
+  password: string; // Demo-only: plaintext password storage is not production-safe.
 };
 
 export type FieldType = "text" | "number" | "currency" | "date" | "checkbox" | "dropdown";
@@ -31,10 +31,12 @@ export type Sheet = {
   updatedAt: string;
 };
 
+// Demo-only in-memory database. Data resets whenever the server restarts.
+// Not suitable for real financial/checking account data.
 const db = {
   users: [] as User[],
   sheets: [] as Sheet[],
-  sessions: new Map<string, string>()
+  sessions: new Map<string, string>() // Demo-only: bearer sessions are in-memory and reset on restart.
 };
 
 function id(prefix: string) {
@@ -49,6 +51,21 @@ export function registerUser(email: string, password: string) {
   const user: User = { id: id("usr"), email, password };
   db.users.push(user);
   return user;
+}
+
+export const supportedFieldTypes: FieldType[] = ["text", "number", "currency", "date", "checkbox", "dropdown"];
+
+function getOwnedSheetOrThrow(userId: string, sheetId: string) {
+  const sheet = db.sheets.find((s) => s.id === sheetId);
+  if (!sheet) throw new Error("Sheet not found");
+  if (sheet.userId !== userId) throw new Error("Forbidden");
+  return sheet;
+}
+
+function getOwnedRecordOrThrow(sheet: Sheet, recordId: string) {
+  const record = sheet.records.find((r) => r.id === recordId);
+  if (!record) throw new Error("Record not found");
+  return record;
 }
 
 export function loginUser(email: string, password: string) {
@@ -103,8 +120,7 @@ export function createSampleCheckbook(userId: string) {
 }
 
 export function addField(userId: string, sheetId: string, field: Omit<SheetField, "id">) {
-  const sheet = db.sheets.find((s) => s.id === sheetId && s.userId === userId);
-  if (!sheet) throw new Error("Sheet not found");
+  const sheet = getOwnedSheetOrThrow(userId, sheetId);
   const newField: SheetField = { ...field, id: id("fld") };
   sheet.fields.push(newField);
   sheet.updatedAt = new Date().toISOString();
@@ -112,8 +128,9 @@ export function addField(userId: string, sheetId: string, field: Omit<SheetField
 }
 
 export function deleteField(userId: string, sheetId: string, fieldId: string) {
-  const sheet = db.sheets.find((s) => s.id === sheetId && s.userId === userId);
-  if (!sheet) throw new Error("Sheet not found");
+  const sheet = getOwnedSheetOrThrow(userId, sheetId);
+  const exists = sheet.fields.some((f) => f.id === fieldId);
+  if (!exists) throw new Error("Field not found");
   sheet.fields = sheet.fields.filter((f) => f.id !== fieldId);
   sheet.records = sheet.records.map((r) => {
     const { [fieldId]: _removed, ...rest } = r.values;
@@ -123,8 +140,7 @@ export function deleteField(userId: string, sheetId: string, fieldId: string) {
 }
 
 export function addRecord(userId: string, sheetId: string, values: Record<string, unknown>) {
-  const sheet = db.sheets.find((s) => s.id === sheetId && s.userId === userId);
-  if (!sheet) throw new Error("Sheet not found");
+  const sheet = getOwnedSheetOrThrow(userId, sheetId);
   const now = new Date().toISOString();
   const record: SheetRecord = { id: id("rec"), values, createdAt: now, updatedAt: now };
   sheet.records.push(record);
@@ -133,10 +149,8 @@ export function addRecord(userId: string, sheetId: string, values: Record<string
 }
 
 export function updateRecord(userId: string, sheetId: string, recordId: string, values: Record<string, unknown>) {
-  const sheet = db.sheets.find((s) => s.id === sheetId && s.userId === userId);
-  if (!sheet) throw new Error("Sheet not found");
-  const record = sheet.records.find((r) => r.id === recordId);
-  if (!record) throw new Error("Record not found");
+  const sheet = getOwnedSheetOrThrow(userId, sheetId);
+  const record = getOwnedRecordOrThrow(sheet, recordId);
   record.values = values;
   record.updatedAt = new Date().toISOString();
   sheet.updatedAt = record.updatedAt;
@@ -144,8 +158,8 @@ export function updateRecord(userId: string, sheetId: string, recordId: string, 
 }
 
 export function deleteRecord(userId: string, sheetId: string, recordId: string) {
-  const sheet = db.sheets.find((s) => s.id === sheetId && s.userId === userId);
-  if (!sheet) throw new Error("Sheet not found");
+  const sheet = getOwnedSheetOrThrow(userId, sheetId);
+  getOwnedRecordOrThrow(sheet, recordId);
   sheet.records = sheet.records.filter((r) => r.id !== recordId);
   sheet.updatedAt = new Date().toISOString();
 }

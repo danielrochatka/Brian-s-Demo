@@ -10,11 +10,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { sheetId, recordId } = await params;
+    if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
+    if (!recordId) return NextResponse.json({ error: "recordId is required" }, { status: 400 });
     const { values } = await req.json();
-    const record = updateRecord(user.id, sheetId, recordId, values ?? {});
+    if (!values || typeof values !== "object" || Array.isArray(values)) {
+      return NextResponse.json({ error: "Record values are required" }, { status: 400 });
+    }
+    const record = updateRecord(user.id, sheetId, recordId, values);
     return NextResponse.json({ record });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update record" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Unable to update record";
+    const status =
+      message === "Forbidden" ? 403 : message === "Sheet not found" || message === "Record not found" ? 404 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -24,9 +32,14 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   try {
     const { sheetId, recordId } = await params;
+    if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
+    if (!recordId) return NextResponse.json({ error: "recordId is required" }, { status: 400 });
     deleteRecord(user.id, sheetId, recordId);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to delete record" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Unable to delete record";
+    const status =
+      message === "Forbidden" ? 403 : message === "Sheet not found" || message === "Record not found" ? 404 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
