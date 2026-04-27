@@ -46,6 +46,11 @@ export default function HomePage() {
   const [recordDraft, setRecordDraft] = useState<Record<string, unknown>>({});
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
 
+  function resetRecordEditor() {
+    setEditingRecordId(null);
+    setRecordDraft({});
+  }
+
   useEffect(() => {
     const existing = localStorage.getItem("demo_token");
     if (existing) setToken(existing);
@@ -59,10 +64,15 @@ export default function HomePage() {
       localStorage.removeItem("demo_token");
       setSheets([]);
       setSelectedSheetId(null);
+      resetRecordEditor();
     }
   }, [token]);
 
   const selectedSheet = useMemo(() => sheets.find((s) => s.id === selectedSheetId) ?? null, [sheets, selectedSheetId]);
+  const isEditingExistingRecord = useMemo(
+    () => !!editingRecordId && !!selectedSheet?.records.some((record) => record.id === editingRecordId),
+    [editingRecordId, selectedSheet]
+  );
 
   const amountField = useMemo(
     () => selectedSheet?.fields.find((field) => field.name.toLowerCase().trim() === "amount") ?? null,
@@ -77,6 +87,12 @@ export default function HomePage() {
       return Number.isFinite(numeric) ? sum + numeric : sum;
     }, 0);
   }, [selectedSheet, amountField]);
+
+  useEffect(() => {
+    if (editingRecordId && !isEditingExistingRecord) {
+      resetRecordEditor();
+    }
+  }, [editingRecordId, isEditingExistingRecord]);
 
   async function api(path: string, options: RequestInit = {}) {
     const res = await fetch(path, {
@@ -120,11 +136,13 @@ export default function HomePage() {
 
     if (!selectedSheetId && loadedSheets[0]) {
       setSelectedSheetId(loadedSheets[0].id);
+      resetRecordEditor();
       return;
     }
 
     if (selectedSheetId && !loadedSheets.some((sheet) => sheet.id === selectedSheetId)) {
       setSelectedSheetId(loadedSheets[0]?.id ?? null);
+      resetRecordEditor();
     }
   }
 
@@ -202,6 +220,7 @@ export default function HomePage() {
       setNewFieldName("");
       setNewFieldOptions("");
       setNewFieldRequired(false);
+      resetRecordEditor();
       await refreshSheets();
       setMessage("Field added.");
     } catch (error) {
@@ -217,6 +236,7 @@ export default function HomePage() {
         method: "DELETE",
         body: JSON.stringify({ fieldId })
       });
+      resetRecordEditor();
       await refreshSheets();
       setMessage("Field deleted.");
     } catch (error) {
@@ -232,24 +252,26 @@ export default function HomePage() {
     if (!selectedSheet) return;
 
     const payload = { values: recordDraft };
+    const hasValidEditingRecord = !!editingRecordId && selectedSheet.records.some((record) => record.id === editingRecordId);
+    const actionLabel = hasValidEditingRecord ? "update" : "create";
 
     try {
-      if (editingRecordId) {
+      if (hasValidEditingRecord && editingRecordId) {
         await api(`/api/sheets/${selectedSheet.id}/records/${editingRecordId}`, {
           method: "PUT",
           body: JSON.stringify(payload)
         });
-        setEditingRecordId(null);
         setMessage("Record updated.");
       } else {
         await api(`/api/sheets/${selectedSheet.id}/records`, { method: "POST", body: JSON.stringify(payload) });
         setMessage("Record added.");
       }
 
-      setRecordDraft({});
+      resetRecordEditor();
       await refreshSheets();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to save record");
+      const fallbackMessage = actionLabel === "update" ? "Unable to update record" : "Unable to create record";
+      setMessage(error instanceof Error ? error.message : fallbackMessage);
     }
   }
 
@@ -258,6 +280,9 @@ export default function HomePage() {
 
     try {
       await api(`/api/sheets/${selectedSheet.id}/records/${recordId}`, { method: "DELETE" });
+      if (editingRecordId === recordId) {
+        resetRecordEditor();
+      }
       await refreshSheets();
       setMessage("Record deleted.");
     } catch (error) {
@@ -268,6 +293,12 @@ export default function HomePage() {
   function startEdit(record: SheetRecord) {
     setEditingRecordId(record.id);
     setRecordDraft(record.values);
+  }
+
+  function selectSheet(sheetId: string) {
+    if (sheetId === selectedSheetId) return;
+    setSelectedSheetId(sheetId);
+    resetRecordEditor();
   }
 
   if (!token) {
@@ -344,7 +375,7 @@ export default function HomePage() {
               <button
                 key={sheet.id}
                 style={sheet.id === selectedSheetId ? styles.activeSheet : styles.sheetItem}
-                onClick={() => setSelectedSheetId(sheet.id)}
+                onClick={() => selectSheet(sheet.id)}
               >
                 {sheet.title}
               </button>
@@ -420,7 +451,7 @@ export default function HomePage() {
               </section>
 
               <section style={styles.entryBlock}>
-                <h3>{editingRecordId ? "Edit Record" : "Add Record"}</h3>
+                <h3>{isEditingExistingRecord ? "Edit Record" : "Add Record"}</h3>
                 <p style={styles.muted}>Enter values for each field, then save the row.</p>
                 <div style={styles.rowWrap}>
                   {selectedSheet.fields.map((field) => (
@@ -432,7 +463,7 @@ export default function HomePage() {
                     />
                   ))}
                   <button style={styles.primaryBtn} onClick={saveRecord}>
-                    {editingRecordId ? "Update" : "Add"} Record
+                    {isEditingExistingRecord ? "Update" : "Add"} Record
                   </button>
                 </div>
               </section>
