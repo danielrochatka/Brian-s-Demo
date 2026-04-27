@@ -31,13 +31,26 @@ export type Sheet = {
   updatedAt: string;
 };
 
+type DemoDb = {
+  users: User[];
+  sheets: Sheet[];
+  sessions: Map<string, string>;
+};
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __checkbookDemoDb: DemoDb | undefined;
+}
+
 // Demo-only in-memory database. Data resets whenever the server restarts.
 // Not suitable for real financial/checking account data.
-const db = {
-  users: [] as User[],
-  sheets: [] as Sheet[],
-  sessions: new Map<string, string>() // Demo-only: bearer sessions are in-memory and reset on restart.
-};
+const db: DemoDb =
+  globalThis.__checkbookDemoDb ??
+  (globalThis.__checkbookDemoDb = {
+    users: [],
+    sheets: [],
+    sessions: new Map<string, string>() // Demo-only: bearer sessions are in-memory and reset on restart.
+  });
 
 function id(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 11)}`;
