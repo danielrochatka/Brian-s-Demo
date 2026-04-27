@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Check Writer Demo",
-  description: "In-memory custom sheet + checkbook demo app"
+  title: "In-Memory Checkbook Custom Sheet Demo",
+  description: "Demo app for custom sheets and a sample checkbook using in-memory data storage"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

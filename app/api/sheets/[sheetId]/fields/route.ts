@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { addField, deleteField, FieldType, supportedFieldTypes } from "@/lib/memoryDb";
 import { getAuthUser } from "@/lib/auth";
 
-type Params = { params: Promise<{ sheetId: string }> };
+type Params = { params: { sheetId: string } };
 
 export async function POST(req: NextRequest, { params }: Params) {
   const user = getAuthUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { sheetId } = await params;
+    const { sheetId } = params;
     if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
     const { name, type, required, options } = await req.json();
     if (!name?.trim()) return NextResponse.json({ error: "Field name is required" }, { status: 400 });
@@ -38,7 +38,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { sheetId } = await params;
+    const { sheetId } = params;
     if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
     const { fieldId } = await req.json();
     if (!fieldId) return NextResponse.json({ error: "fieldId is required" }, { status: 400 });

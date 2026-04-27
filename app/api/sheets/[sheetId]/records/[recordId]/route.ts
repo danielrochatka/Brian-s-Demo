@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteRecord, updateRecord } from "@/lib/memoryDb";
 import { getAuthUser } from "@/lib/auth";
 
-type Params = { params: Promise<{ sheetId: string; recordId: string }> };
+type Params = { params: { sheetId: string; recordId: string } };
 
 export async function PUT(req: NextRequest, { params }: Params) {
   const user = getAuthUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { sheetId, recordId } = await params;
+    const { sheetId, recordId } = params;
     if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
     if (!recordId) return NextResponse.json({ error: "recordId is required" }, { status: 400 });
     const { values } = await req.json();
@@ -31,7 +31,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { sheetId, recordId } = await params;
+    const { sheetId, recordId } = params;
     if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
     if (!recordId) return NextResponse.json({ error: "recordId is required" }, { status: 400 });
     deleteRecord(user.id, sheetId, recordId);
