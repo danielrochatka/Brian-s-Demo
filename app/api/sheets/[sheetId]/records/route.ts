@@ -10,10 +10,16 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const { sheetId } = await params;
+    if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
     const { values } = await req.json();
-    const record = addRecord(user.id, sheetId, values ?? {});
+    if (!values || typeof values !== "object" || Array.isArray(values)) {
+      return NextResponse.json({ error: "Record values are required" }, { status: 400 });
+    }
+    const record = addRecord(user.id, sheetId, values);
     return NextResponse.json({ record });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to add record" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Unable to add record";
+    const status = message === "Forbidden" ? 403 : message === "Sheet not found" ? 404 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

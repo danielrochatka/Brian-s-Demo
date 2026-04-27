@@ -4,6 +4,9 @@ import { loginUser } from "@/lib/memoryDb";
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    }
     const { token, user } = loginUser(email, password);
     return NextResponse.json({ token, user: { id: user.id, email: user.email }, warning: "Demo-only auth: not production-safe." });
   } catch (error) {

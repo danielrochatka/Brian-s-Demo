@@ -36,7 +36,7 @@ export default function HomePage() {
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
   const [sheetTitle, setSheetTitle] = useState("");
-  const [message, setMessage] = useState("Demo only: passwords are in plain text in server memory.");
+  const [message, setMessage] = useState("Demo only: this app stores data and sessions in server memory.");
 
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState<FieldType>("text");
@@ -207,6 +207,7 @@ export default function HomePage() {
         <section style={styles.card}>
           <h1>Check Writer / Data Entry Demo</h1>
           <p style={styles.muted}>Create an account and log in. Demo-only authentication.</p>
+          <p style={styles.warningText}>Warning: This is a demo, not for real financial data.</p>
           <div style={styles.authTabs}>
             <button onClick={() => setMode("login")} style={mode === "login" ? styles.activeTab : styles.tab}>Login</button>
             <button onClick={() => setMode("register")} style={mode === "register" ? styles.activeTab : styles.tab}>Register</button>
@@ -223,6 +224,8 @@ export default function HomePage() {
   return (
     <main style={styles.app}>
       <aside style={styles.sidebar}>
+        <h1 style={{ margin: 0, fontSize: 20 }}>Dashboard</h1>
+        <p style={styles.warningText}>In-memory demo: all data resets when the server restarts.</p>
         <h2>Your Sheets</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <input style={styles.input} value={sheetTitle} onChange={(e) => setSheetTitle(e.target.value)} placeholder="New sheet title" />
@@ -230,11 +233,15 @@ export default function HomePage() {
         </div>
         <button style={styles.secondaryBtn} onClick={createSample}>Create Sample Checkbook Sheet</button>
         <div style={styles.sheetList}>
-          {sheets.map((sheet) => (
-            <button key={sheet.id} style={sheet.id === selectedSheetId ? styles.activeSheet : styles.sheetItem} onClick={() => setSelectedSheetId(sheet.id)}>
-              {sheet.title}
-            </button>
-          ))}
+          {sheets.length === 0 ? (
+            <p style={styles.muted}>No sheets yet. Create one or add the sample checkbook.</p>
+          ) : (
+            sheets.map((sheet) => (
+              <button key={sheet.id} style={sheet.id === selectedSheetId ? styles.activeSheet : styles.sheetItem} onClick={() => setSelectedSheetId(sheet.id)}>
+                {sheet.title}
+              </button>
+            ))
+          )}
         </div>
         <button style={styles.linkBtn} onClick={() => setToken(null)}>Logout</button>
       </aside>
@@ -243,6 +250,7 @@ export default function HomePage() {
         {selectedSheet ? (
           <>
             <h1>{selectedSheet.title}</h1>
+            <p style={styles.muted}>Sheet detail view</p>
             <div style={styles.grid2}>
               <section style={styles.block}>
                 <h3>Field Builder</h3>
@@ -258,12 +266,16 @@ export default function HomePage() {
                   <button style={styles.primaryBtn} onClick={addField}>Add Field</button>
                 </div>
                 <ul style={styles.list}>
-                  {selectedSheet.fields.map((field) => (
-                    <li key={field.id} style={styles.listItem}>
-                      <span>{field.name} ({field.type}) {field.required ? "*" : ""}</span>
-                      <button style={styles.dangerBtn} onClick={() => removeField(field.id)}>Delete</button>
-                    </li>
-                  ))}
+                  {selectedSheet.fields.length === 0 ? (
+                    <li style={styles.muted}>No fields yet. Add your first field.</li>
+                  ) : (
+                    selectedSheet.fields.map((field) => (
+                      <li key={field.id} style={styles.listItem}>
+                        <span>{field.name} ({field.type}) {field.required ? "*" : ""}</span>
+                        <button style={styles.dangerBtn} onClick={() => removeField(field.id)}>Delete</button>
+                      </li>
+                    ))
+                  )}
                 </ul>
               </section>
 
@@ -289,15 +301,21 @@ export default function HomePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedSheet.records.map((record) => (
-                      <tr key={record.id}>
-                        {selectedSheet.fields.map((field) => <td key={field.id}>{formatCell(record.values[field.id], field.type)}</td>)}
-                        <td style={{ display: "flex", gap: 8 }}>
-                          <button style={styles.secondaryBtn} onClick={() => startEdit(record)}>Edit</button>
-                          <button style={styles.dangerBtn} onClick={() => deleteRow(record.id)}>Delete</button>
-                        </td>
+                    {selectedSheet.records.length === 0 ? (
+                      <tr>
+                        <td colSpan={selectedSheet.fields.length + 1} style={styles.emptyCell}>No records yet.</td>
                       </tr>
-                    ))}
+                    ) : (
+                      selectedSheet.records.map((record) => (
+                        <tr key={record.id}>
+                          {selectedSheet.fields.map((field) => <td key={field.id}>{formatCell(record.values[field.id], field.type)}</td>)}
+                          <td style={{ display: "flex", gap: 8 }}>
+                            <button style={styles.secondaryBtn} onClick={() => startEdit(record)}>Edit</button>
+                            <button style={styles.dangerBtn} onClick={() => deleteRow(record.id)}>Delete</button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -359,6 +377,7 @@ const styles: Record<string, React.CSSProperties> = {
   dangerBtn: { border: "1px solid #ef4444", background: "white", color: "#ef4444", borderRadius: 8, padding: "6px 8px" },
   linkBtn: { border: "none", background: "transparent", color: "#2563eb", textAlign: "left", padding: 0 },
   muted: { color: "#6b7280", marginTop: -8 },
+  warningText: { color: "#92400e", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 8, fontSize: 13 },
   message: { color: "#1f2937", fontSize: 14 },
   sheetList: { display: "grid", gap: 8 },
   sheetItem: { textAlign: "left", border: "1px solid #d1d5db", borderRadius: 8, background: "white", padding: 10 },
@@ -369,5 +388,6 @@ const styles: Record<string, React.CSSProperties> = {
   list: { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 },
   listItem: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 },
   table: { width: "100%", borderCollapse: "collapse" },
-  checkboxLabel: { display: "flex", alignItems: "center", gap: 8 }
+  checkboxLabel: { display: "flex", alignItems: "center", gap: 8 },
+  emptyCell: { textAlign: "center", padding: 16, color: "#6b7280" }
 };
