@@ -105,7 +105,12 @@ export function createSheet(userId: string, title: string) {
 }
 
 export function createSampleCheckbook(userId: string) {
-  const sheet = createSheet(userId, "My Checkbook");
+  const existing = db.sheets.find((sheet) => sheet.userId === userId && sheet.title === "Sample Checkbook");
+  if (existing) {
+    return existing;
+  }
+
+  const sheet = createSheet(userId, "Sample Checkbook");
   const fields: Omit<SheetField, "id">[] = [
     { name: "Date", type: "date", required: true },
     { name: "Check Number", type: "text" },
@@ -114,8 +119,47 @@ export function createSampleCheckbook(userId: string) {
     { name: "Memo", type: "text" },
     { name: "Cleared", type: "checkbox" }
   ];
+
   sheet.fields = fields.map((f) => ({ ...f, id: id("fld") }));
-  sheet.updatedAt = new Date().toISOString();
+
+  const fieldIdByName = Object.fromEntries(sheet.fields.map((field) => [field.name, field.id]));
+
+  const sampleValues: Record<string, unknown>[] = [
+    {
+      [fieldIdByName.Date]: "2026-01-05",
+      [fieldIdByName["Check Number"]]: "1001",
+      [fieldIdByName.Payee]: "Electric Company",
+      [fieldIdByName.Amount]: "86.75",
+      [fieldIdByName.Memo]: "Demo utility bill",
+      [fieldIdByName.Cleared]: true
+    },
+    {
+      [fieldIdByName.Date]: "2026-01-08",
+      [fieldIdByName["Check Number"]]: "1002",
+      [fieldIdByName.Payee]: "Landlord",
+      [fieldIdByName.Amount]: "1500.00",
+      [fieldIdByName.Memo]: "Demo rent payment",
+      [fieldIdByName.Cleared]: false
+    },
+    {
+      [fieldIdByName.Date]: "2026-01-10",
+      [fieldIdByName["Check Number"]]: "DEBIT",
+      [fieldIdByName.Payee]: "Grocery Store",
+      [fieldIdByName.Amount]: "124.32",
+      [fieldIdByName.Memo]: "Demo groceries",
+      [fieldIdByName.Cleared]: true
+    }
+  ];
+
+  const now = new Date().toISOString();
+  sheet.records = sampleValues.map((values) => ({
+    id: id("rec"),
+    values,
+    createdAt: now,
+    updatedAt: now
+  }));
+
+  sheet.updatedAt = now;
   return sheet;
 }
 

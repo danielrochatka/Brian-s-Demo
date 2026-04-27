@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteRecord, updateRecord } from "@/lib/memoryDb";
 import { getAuthUser } from "@/lib/auth";
 
-type Params = { params: Promise<{ sheetId: string; recordId: string }> };
+type Params = Promise<{ sheetId: string; recordId: string }>;
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: { params: Params }) {
   const user = getAuthUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: { params: Params }) {
   const user = getAuthUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
