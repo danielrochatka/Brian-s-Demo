@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { addRecord } from "@/lib/memoryDb";
 import { getAuthUser } from "@/lib/auth";
 
-type Params = { params: { sheetId: string } };
+type Params = Promise<{ sheetId: string }>;
 
-export async function POST(req: NextRequest, { params }: Params) {
+export async function POST(req: NextRequest, { params }: { params: Params }) {
   const user = getAuthUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { sheetId } = params;
+    const { sheetId } = await params;
     if (!sheetId) return NextResponse.json({ error: "sheetId is required" }, { status: 400 });
     const { values } = await req.json();
     if (!values || typeof values !== "object" || Array.isArray(values)) {
